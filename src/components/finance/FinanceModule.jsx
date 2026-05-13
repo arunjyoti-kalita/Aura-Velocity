@@ -62,12 +62,12 @@ export function FinanceModule() {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         {/* Liquidity Pulse */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 aspect-[21/6] bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group"
+          className="lg:col-span-2 aspect-[21/4.5] bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group"
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <LiquidityPulse 
@@ -79,25 +79,25 @@ export function FinanceModule() {
         </motion.div>
 
         {/* Quick Stats */}
-        <div className="flex flex-col gap-6">
-          <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-white/10 transition-colors">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/40">Monthly Velocity</span>
+        <div className="flex flex-col gap-4">
+          <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-3 flex flex-col justify-between group hover:border-white/10 transition-colors">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/40">Monthly Velocity</span>
             <div>
-              <div className="flex items-center gap-2 text-green-400 mb-1">
-                <ArrowUpRight size={16} />
-                <span className="text-xl font-black tracking-tight">₹{stats.income.toLocaleString()}</span>
+              <div className="flex items-center gap-2 text-green-400 mb-0.5">
+                <ArrowUpRight size={14} />
+                <span className="text-lg font-black tracking-tight">₹{stats.income.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-2 text-red-400/60">
-                <ArrowDownRight size={16} />
-                <span className="text-xl font-black tracking-tight">₹{stats.expense.toLocaleString()}</span>
+                <ArrowDownRight size={14} />
+                <span className="text-lg font-black tracking-tight">₹{stats.expense.toLocaleString()}</span>
               </div>
             </div>
           </div>
-          <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col justify-between group hover:border-white/10 transition-colors">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/40">Savings Rate</span>
+          <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-3 flex flex-col justify-between group hover:border-white/10 transition-colors">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/40">Savings Rate</span>
             <div>
-              <span className="text-3xl font-black text-white tracking-tighter">{stats.savingsRate}%</span>
-              <div className="w-full h-1 bg-white/5 rounded-full mt-4 overflow-hidden">
+              <span className="text-2xl font-black text-white tracking-tighter">{stats.savingsRate}%</span>
+              <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.max(0, Math.min(100, stats.savingsRate))}%` }}

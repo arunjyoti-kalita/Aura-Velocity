@@ -139,7 +139,7 @@ export function DayLogView() {
       ) : (
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-transparent scrollbar-gutter-stable">
           <motion.div 
-            key={currentDate.toISOString() + viewMode + renderTick}
+            key={currentDate.toISOString() + viewMode}
               custom={direction}
               variants={variants}
               initial="initial"

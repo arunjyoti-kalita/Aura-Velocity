@@ -399,38 +399,41 @@ export function EntryModal({ isOpen, onClose, log, isNew }) {
           </div>
 
           {/* Energy Vector (Moved to bottom) */}
-          <div className={rowCls}>
-            <Zap className={clsx("w-4 h-4 mt-2.5 flex-shrink-0 transition-colors", formData.energyLevel > 80 ? "text-orange-500" : formData.energyLevel > 40 ? "text-yellow-500" : "text-blue-500")} />
-            <div className="flex-1 pt-1">
-              <div className="flex justify-between text-[8px] font-black text-gray-700 uppercase tracking-widest mb-1">
-                <span>Low Energy</span>
-                <span className="text-gray-400">Energy Vector: {formData.energyLevel}%</span>
-                <span>Peak Energy</span>
+          <div className={clsx(rowCls, "bg-white/[0.02] border border-white/5 rounded-xl p-3")}>
+            <Zap size={14} className={clsx("mt-1 flex-shrink-0 transition-colors", formData.energyLevel > 80 ? "text-orange-500" : formData.energyLevel > 40 ? "text-yellow-500" : "text-blue-500")} />
+            <div className="flex-1 relative h-6 flex items-center">
+              <div className="absolute inset-0 h-1.5 top-1/2 -translate-y-1/2 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className={clsx("h-full transition-all duration-150", 
+                    formData.energyLevel > 80 ? "bg-orange-500" : formData.energyLevel > 40 ? "bg-yellow-500" : "bg-blue-500"
+                  )}
+                  style={{ width: `${formData.energyLevel}%` }}
+                />
               </div>
               <input 
                 type="range" 
                 min="0" 
                 max="100" 
-                step="5"
+                step="1"
                 value={formData.energyLevel}
                 onChange={(e) => setFormData({ ...formData, energyLevel: parseInt(e.target.value) })}
-                className="w-full accent-accent bg-white/5 h-1.5 rounded-lg appearance-none cursor-pointer"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
+              <div 
+                className="absolute top-[-14px] px-1.5 py-0.5 bg-black/60 rounded text-[8px] font-black text-white/60 pointer-events-none transition-all"
+                style={{ left: `calc(${formData.energyLevel}% - 10px)` }}
+              >
+                {formData.energyLevel}%
+              </div>
             </div>
           </div>
 
           {/* Regret Rating (Only for entries that are in the past) */}
           {new Date(formData.date + 'T' + formData.startTime) < new Date() && (
-            <div className={clsx(rowCls, "pt-2")}>
-              <Smile className={clsx(iconCls, formData.regretRating ? "text-emerald-500" : "")} />
+            <div className={clsx(rowCls, "bg-white/[0.02] border border-white/5 rounded-xl p-3")}>
+              <Smile size={14} className={clsx("mt-1 flex-shrink-0 transition-colors", formData.regretRating ? "text-emerald-500" : "text-gray-600")} />
               <div className="flex-1">
-                <div className="text-[8px] font-black text-gray-700 uppercase tracking-widest mb-2 ml-1 flex justify-between items-center">
-                  <span>Neural Retrospective</span>
-                  {formData.regretRating && (
-                    <span className="text-emerald-500/60 lowercase font-medium">Rated {formData.regretRating}/5</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center gap-1 bg-white/[0.02] p-1 rounded-xl border border-white/5">
+                <div className="flex justify-between items-center gap-1.5">
                   {[1, 2, 3, 4, 5].map((val) => {
                     const emojis = ["😞", "😐", "🤷", "😊", "🔥"];
                     const isActive = formData.regretRating === val;
@@ -446,7 +449,7 @@ export function EntryModal({ isOpen, onClose, log, isNew }) {
                         }}
                         className={clsx(
                           "flex-1 py-1.5 flex flex-col items-center gap-0.5 rounded-lg transition-all",
-                          isActive ? "bg-white/10 scale-105 shadow-lg" : "hover:bg-white/5 grayscale-[0.5] opacity-40 hover:opacity-100 hover:grayscale-0"
+                          isActive ? "bg-white/10 scale-110 shadow-lg border border-white/10" : "hover:bg-white/5 grayscale-[0.5] opacity-30 hover:opacity-100 hover:grayscale-0"
                         )}
                       >
                         <span className="text-base">{emojis[val-1]}</span>

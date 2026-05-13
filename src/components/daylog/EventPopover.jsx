@@ -204,18 +204,15 @@ export function EventPopover({ log, anchorRect, onClose, onEdit }) {
           )}
 
           {/* Row 4: Energy Vector & Neural Retrospective */}
-          <div className="flex flex-col gap-4 mt-1 bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
+          <div className="flex flex-col gap-3 mt-1 bg-white/[0.02] border border-white/5 rounded-xl p-3.5">
             {/* Energy Vector Scale */}
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Energy Vector</span>
-                <span className="text-[9px] font-mono font-bold text-white/40">{localEnergy}%</span>
-              </div>
-              <div className="relative h-1.5 flex items-center">
+            <div className="flex items-center gap-3">
+              <Zap size={14} className={clsx("transition-colors shrink-0", localEnergy > 80 ? "text-orange-500" : localEnergy > 40 ? "text-yellow-500" : "text-blue-500")} />
+              <div className="relative flex-1 h-6 flex items-center">
                 {/* Background Track */}
-                <div className="absolute inset-0 bg-white/5 rounded-full overflow-hidden">
+                <div className="absolute inset-0 h-1.5 top-1/2 -translate-y-1/2 bg-white/5 rounded-full overflow-hidden">
                   <div 
-                    className={clsx("h-full transition-all duration-300", localEnergyColor)}
+                    className={clsx("h-full transition-all duration-150", localEnergyColor)}
                     style={{ width: `${localEnergy}%` }}
                   />
                 </div>
@@ -235,36 +232,40 @@ export function EventPopover({ log, anchorRect, onClose, onEdit }) {
                     updateLog(log.id, { energyLevel: localEnergy });
                     triggerMechanicalFeedback('click');
                   }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer accent-transparent z-10"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
+                {/* Tooltip indicator */}
+                <div 
+                  className="absolute top-[-14px] px-1.5 py-0.5 bg-black/60 rounded text-[8px] font-black text-white/60 pointer-events-none transition-all"
+                  style={{ left: `calc(${localEnergy}% - 10px)` }}
+                >
+                  {localEnergy}%
+                </div>
               </div>
             </div>
 
             {/* Neural Retrospective Icons */}
-            <div className="flex flex-col gap-2.5">
-              <div className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Neural Retrospective</div>
-              <div className="flex justify-between items-center gap-1.5">
-                {[1, 2, 3, 4, 5].map((val) => {
-                  const emojis = ["😞", "😐", "🤷", "😊", "🔥"];
-                  const isActive = localRegret === val;
-                  return (
-                    <button
-                      key={val}
-                      onClick={() => {
-                        setLocalRegret(val);
-                        updateLog(log.id, { regretRating: val });
-                        triggerMechanicalFeedback('clink');
-                      }}
-                      className={clsx(
-                        "flex-1 py-1.5 flex flex-col items-center gap-0.5 rounded-lg transition-all",
-                        isActive ? "bg-white/10 scale-110 shadow-lg" : "hover:bg-white/5 grayscale-[0.5] opacity-40 hover:opacity-100 hover:grayscale-0"
-                      )}
-                    >
-                      <span className="text-base">{emojis[val-1]}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex justify-between items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((val) => {
+                const emojis = ["😞", "😐", "🤷", "😊", "🔥"];
+                const isActive = localRegret === val;
+                return (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      setLocalRegret(val);
+                      updateLog(log.id, { regretRating: val });
+                      triggerMechanicalFeedback('clink');
+                    }}
+                    className={clsx(
+                      "flex-1 py-1.5 flex flex-col items-center gap-0.5 rounded-lg transition-all",
+                      isActive ? "bg-white/10 scale-110 shadow-lg border border-white/10" : "hover:bg-white/5 grayscale-[0.5] opacity-30 hover:opacity-100 hover:grayscale-0"
+                    )}
+                  >
+                    <span className="text-base">{emojis[val-1]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
