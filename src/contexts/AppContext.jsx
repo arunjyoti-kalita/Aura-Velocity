@@ -131,7 +131,7 @@ export function AppProvider({ children }) {
       const next = prev >= 12 ? 0 : prev + 1;
       localStorage.setItem('water_intake', JSON.stringify({
         count: next,
-        date: getGridDate()
+        date: getGridDate(currentDate)
       }));
       return next;
     });
@@ -142,7 +142,7 @@ export function AppProvider({ children }) {
       const next = Math.max(0, prev - 1);
       localStorage.setItem('water_intake', JSON.stringify({
         count: next,
-        date: getGridDate()
+        date: getGridDate(currentDate)
       }));
       return next;
     });
@@ -2535,6 +2535,36 @@ export function AppProvider({ children }) {
     financeSelectedDate,
     setFinanceSelectedDate
   };
+
+  // Sync water intake with the active grid date and handle the 8am reset
+  useEffect(() => {
+    const refreshWater = () => {
+      const activeDateStr = getGridDate(currentDate);
+      const saved = localStorage.getItem('water_intake');
+      if (saved) {
+        const { count, date } = JSON.parse(saved);
+        if (date === activeDateStr) {
+          setWaterIntake(count);
+        } else {
+          setWaterIntake(0);
+        }
+      } else {
+        setWaterIntake(0);
+      }
+    };
+
+    refreshWater();
+    const interval = setInterval(() => {
+      const now = new Date();
+      // If we hit exactly 8am, refresh the dashboard date to trigger a full daily reset
+      if (now.getHours() === 8 && now.getMinutes() === 0) {
+        setCurrentDate(new Date());
+      } else {
+        refreshWater();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [currentDate]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
