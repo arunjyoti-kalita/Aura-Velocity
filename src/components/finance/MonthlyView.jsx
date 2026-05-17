@@ -6,7 +6,7 @@ import {
   Target, Zap, PieChart, Activity, Calendar as CalendarIcon, Wallet
 } from 'lucide-react';
 import { 
-  format, startOfMonth, endOfMonth, eachDayOfInterval, 
+  format, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth,
   isSameMonth, addMonths, subMonths, isSameDay, isWithinInterval
 } from 'date-fns';
 import clsx from 'clsx';
@@ -18,6 +18,7 @@ const CATEGORIES = [
   { id: 'housing', label: 'Housing', emoji: '🏠' },
   { id: 'utilities', label: 'Utilities', emoji: '⚡' },
   { id: 'health', label: 'Health', emoji: '🏥' },
+  { id: 'vice', label: 'Vice Log', emoji: '🚬' },
   { id: 'income', label: 'Income', emoji: '💰' },
   { id: 'general', label: 'General', emoji: '📦' }
 ];
@@ -171,12 +172,14 @@ export function MonthlyView() {
           </div>
         </div>
 
-        <div className="flex items-end justify-between gap-1 h-24 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex items-end justify-between gap-1 h-32 overflow-x-auto pb-2 no-scrollbar">
           {days.map((day, idx) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const { income, expense } = dailyStatsMap[dateKey] || { income: 0, expense: 0 };
-            const incomeHeight = (income / chartMax) * 100;
-            const expenseHeight = (expense / chartMax) * 100;
+            const CHART_HEIGHT_PX = 96; // matches h-32 minus label area
+            const incomeHeight = income > 0 ? Math.max(4, (income / chartMax) * CHART_HEIGHT_PX) : 0;
+            const expenseHeight = expense > 0 ? Math.max(4, (expense / chartMax) * CHART_HEIGHT_PX) : 0;
+            const hasData = income > 0 || expense > 0;
             const isSelected = isSameDay(day, financeSelectedDate);
 
             return (
@@ -184,22 +187,28 @@ export function MonthlyView() {
                 key={idx} 
                 onClick={() => setFinanceSelectedDate(day)}
                 className={clsx(
-                  "flex-1 min-w-[30px] flex flex-col items-center gap-2 group transition-all",
-                  isSelected ? "opacity-100" : "opacity-40 hover:opacity-100"
+                  "flex-1 min-w-[20px] flex flex-col items-center gap-2 group transition-all",
+                  isSelected ? "opacity-100" : "opacity-40 hover:opacity-80"
                 )}
               >
-                <div className="flex items-end gap-1 h-full w-full justify-center">
-                  <div 
-                    className="w-1.5 bg-green-500/60 rounded-t-full transition-all duration-700"
-                    style={{ height: `${Math.max(incomeHeight, 2)}%` }}
-                  />
-                  <div 
-                    className="w-1.5 bg-red-500/60 rounded-t-full transition-all duration-700"
-                    style={{ height: `${Math.max(expenseHeight, 2)}%` }}
-                  />
+                <div className="flex items-end gap-0.5 h-24 w-full justify-center">
+                  {hasData ? (
+                    <>
+                      <div 
+                        className="w-1.5 bg-green-500/70 rounded-t-full transition-all duration-700"
+                        style={{ height: `${incomeHeight}px` }}
+                      />
+                      <div 
+                        className="w-1.5 bg-red-500/70 rounded-t-full transition-all duration-700"
+                        style={{ height: `${expenseHeight}px` }}
+                      />
+                    </>
+                  ) : (
+                    <div className="w-1 h-1 rounded-full bg-white/10 mb-0 self-end" />
+                  )}
                 </div>
                 <span className={clsx(
-                  "text-[8px] font-black transition-colors",
+                  "text-[7px] font-black transition-colors",
                   isSelected ? "text-accent" : "text-white/20"
                 )}>
                   {format(day, 'd')}
@@ -305,6 +314,32 @@ export function MonthlyView() {
               <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
                 <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-1">Monthly Expense</p>
                 <p className="text-lg font-black text-white">₹{monthlyTotals.expense.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Avg Daily Spend */}
+            <div className="mt-4 p-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-between">
+              <div>
+                <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">
+                  Avg Daily Burn &bull; {getDaysInMonth(currentMonth)} days
+                </p>
+                <p className="text-xl font-black text-accent tabular-nums tracking-tight">
+                  ₹{monthlyTotals.expense > 0
+                    ? Math.round(monthlyTotals.expense / getDaysInMonth(currentMonth)).toLocaleString()
+                    : 0}
+                  <span className="text-[10px] font-black text-white/20 ml-1">/day</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[7px] font-black text-white/20 uppercase tracking-widest">
+                  {format(currentMonth, 'MMMM')} &bull; {getDaysInMonth(currentMonth)}d
+                </span>
+                <div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent/60 rounded-full transition-all duration-700"
+                    style={{ width: `${Math.min(100, monthlyTotals.expense > 0 ? 100 : 0)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>

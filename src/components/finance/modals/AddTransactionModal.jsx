@@ -12,8 +12,15 @@ const CATEGORIES = [
   { id: 'housing', label: 'Housing', emoji: '🏠' },
   { id: 'utilities', label: 'Utilities', emoji: '⚡' },
   { id: 'health', label: 'Health', emoji: '🏥' },
+  { id: 'vice', label: 'Vice Log', emoji: '🚬' },
   { id: 'income', label: 'Income', emoji: '💰' },
   { id: 'general', label: 'General', emoji: '📦' }
+];
+
+const FUNDING_SOURCES = [
+  { id: 'axisX', label: 'AxisX' },
+  { id: 'icici', label: 'ICiCi' },
+  { id: 'cash', label: 'Cash' },
 ];
 
 export function AddTransactionModal({ onClose }) {
@@ -25,7 +32,7 @@ export function AddTransactionModal({ onClose }) {
   const [amount, setAmount] = useState(initialData.amount || '');
   const [payee, setPayee] = useState(initialData.payee || '');
   const [category, setCategory] = useState(initialData.category || 'general');
-  const [account, setAccount] = useState(initialData.account || 'Main Bank');
+  const [account, setAccount] = useState(initialData.account || 'axisX');
   const [date, setDate] = useState(format(new Date(initialData.timestamp || new Date()), 'yyyy-MM-dd'));
 
   const handleSubmit = (e) => {
@@ -172,13 +179,17 @@ export function AddTransactionModal({ onClose }) {
               <label className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] ml-2 flex items-center gap-1">
                 <CreditCard size={10} /> Funding Source
               </label>
-              <input 
-                type="text"
-                placeholder="e.g. HDFC Credit Card, Cash"
+              <select
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
-                className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-white/20 transition-all"
-              />
+                className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold text-white outline-none focus:border-white/20 transition-all appearance-none cursor-pointer"
+              >
+                {FUNDING_SOURCES.map(src => (
+                  <option key={src.id} value={src.id} className="bg-[#121216]">
+                    {src.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-2 md:col-span-2">
               <label className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] ml-2 flex items-center gap-1">

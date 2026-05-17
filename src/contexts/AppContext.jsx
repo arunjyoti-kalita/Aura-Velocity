@@ -117,21 +117,48 @@ export function AppProvider({ children }) {
   const recentlyDeleted = useRef(new Set());
 
   // Water Intake State
+  // Initialize: read from localStorage only if the saved date matches TODAY's grid date
   const [waterIntake, setWaterIntake] = useState(() => {
-    const saved = localStorage.getItem('water_intake');
-    if (saved) {
-      const { count, date } = JSON.parse(saved);
-      if (date === getGridDate()) return count;
-    }
+    try {
+      const saved = localStorage.getItem('water_intake');
+      if (saved) {
+        const { count, date } = JSON.parse(saved);
+        const todayStr = getGridDate(); // no arg = system clock = real today
+        if (date === todayStr) return count;
+      }
+    } catch (e) {}
     return 0;
   });
+
+  // Automatic daily reset — runs on mount and every minute.
+  // If the date stored in localStorage no longer matches today's grid date, wipe to 0.
+  useEffect(() => {
+    const checkAndReset = () => {
+      try {
+        const todayStr = getGridDate();
+        const saved = localStorage.getItem('water_intake');
+        if (saved) {
+          const { date } = JSON.parse(saved);
+          if (date !== todayStr) {
+            // New day — clear stale count
+            localStorage.setItem('water_intake', JSON.stringify({ count: 0, date: todayStr }));
+            setWaterIntake(0);
+          }
+        }
+      } catch (e) {}
+    };
+
+    checkAndReset(); // run immediately on mount
+    const interval = setInterval(checkAndReset, 60000); // re-check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const gulpWater = () => {
     setWaterIntake(prev => {
       const next = prev >= 12 ? 0 : prev + 1;
       localStorage.setItem('water_intake', JSON.stringify({
         count: next,
-        date: getGridDate(currentDate)
+        date: getGridDate() // always tag with the real current grid date
       }));
       return next;
     });
@@ -142,7 +169,7 @@ export function AppProvider({ children }) {
       const next = Math.max(0, prev - 1);
       localStorage.setItem('water_intake', JSON.stringify({
         count: next,
-        date: getGridDate(currentDate)
+        date: getGridDate() // always tag with the real current grid date
       }));
       return next;
     });
@@ -2535,36 +2562,6 @@ export function AppProvider({ children }) {
     financeSelectedDate,
     setFinanceSelectedDate
   };
-
-  // Sync water intake with the active grid date and handle the 8am reset
-  useEffect(() => {
-    const refreshWater = () => {
-      const activeDateStr = getGridDate(currentDate);
-      const saved = localStorage.getItem('water_intake');
-      if (saved) {
-        const { count, date } = JSON.parse(saved);
-        if (date === activeDateStr) {
-          setWaterIntake(count);
-        } else {
-          setWaterIntake(0);
-        }
-      } else {
-        setWaterIntake(0);
-      }
-    };
-
-    refreshWater();
-    const interval = setInterval(() => {
-      const now = new Date();
-      // If we hit exactly 8am, refresh the dashboard date to trigger a full daily reset
-      if (now.getHours() === 8 && now.getMinutes() === 0) {
-        setCurrentDate(new Date());
-      } else {
-        refreshWater();
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [currentDate]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
