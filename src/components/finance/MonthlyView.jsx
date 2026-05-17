@@ -104,6 +104,17 @@ export function MonthlyView() {
     return Math.max(...dailyValues, 1000);
   }, [dailyStatsMap]);
 
+  // Decoupled max calculations for independent intake and output scaling
+  const intakeMax = useMemo(() => {
+    const dailyIncomes = Object.values(dailyStatsMap).map(s => s.income || 0);
+    return Math.max(...dailyIncomes, 1000);
+  }, [dailyStatsMap]);
+
+  const outputMax = useMemo(() => {
+    const dailyExpenses = Object.values(dailyStatsMap).map(s => s.expense || 0);
+    return Math.max(...dailyExpenses, 1000);
+  }, [dailyStatsMap]);
+
   // Stats for the currently selected day
   const activeDayStats = useMemo(() => {
     const dateKey = format(financeSelectedDate, 'yyyy-MM-dd');
@@ -235,8 +246,8 @@ export function MonthlyView() {
               const dateKey = format(day, 'yyyy-MM-dd');
               const { income, expense } = dailyStatsMap[dateKey] || { income: 0, expense: 0 };
               const CHART_HEIGHT_PX = 60;
-              const incomeHeight = income > 0 ? Math.max(4, (income / chartMax) * CHART_HEIGHT_PX) : 0;
-              const expenseHeight = expense > 0 ? Math.max(4, (expense / chartMax) * CHART_HEIGHT_PX) : 0;
+              const incomeHeight = income > 0 ? Math.max(3, (income / intakeMax) * CHART_HEIGHT_PX) : 0;
+              const expenseHeight = expense > 0 ? Math.max(3, (expense / outputMax) * CHART_HEIGHT_PX) : 0;
               const hasData = income > 0 || expense > 0;
               const isSelected = isSameDay(day, financeSelectedDate);
               const isToday = isSameDay(day, new Date());
@@ -282,8 +293,50 @@ export function MonthlyView() {
               );
             })}
           </div>
+          {/* Subtle line graph overlay */}
+          <div className="absolute left-0 right-0 top-0 h-[60px] pointer-events-none">
+            <svg className="w-full h-full" preserveAspectRatio="none">
+              {/* Intake Line (Green) */}
+              {days.length > 0 && (
+                <path
+                  d={days.map((day, idx) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const { income } = dailyStatsMap[dateKey] || { income: 0 };
+                    const incomeHeight = income > 0 ? Math.max(3, (income / intakeMax) * 60) : 0;
+                    const x = ((idx + 0.5) / days.length) * 100;
+                    const y = 60 - incomeHeight;
+                    return `${idx === 0 ? 'M' : 'L'} ${x}% ${y}`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="rgba(74, 222, 128, 0.25)"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+              {/* Output Line (Red) */}
+              {days.length > 0 && (
+                <path
+                  d={days.map((day, idx) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const { expense } = dailyStatsMap[dateKey] || { expense: 0 };
+                    const expenseHeight = expense > 0 ? Math.max(3, (expense / outputMax) * 60) : 0;
+                    const x = ((idx + 0.5) / days.length) * 100;
+                    const y = 60 - expenseHeight;
+                    return `${idx === 0 ? 'M' : 'L'} ${x}% ${y}`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="rgba(248, 113, 113, 0.25)"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </svg>
+          </div>
+
           {/* Baseline rule */}
-          <div className="absolute bottom-6 left-0 right-0 h-px bg-white/5 pointer-events-none" />
+          <div className="absolute bottom-[18px] left-0 right-0 h-px bg-white/5 pointer-events-none" />
         </div>
         
         {/* Heatmap */}

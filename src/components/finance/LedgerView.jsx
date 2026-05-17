@@ -235,7 +235,7 @@ export function LedgerView() {
             <ArrowDownRight size={14} className="text-red-400/70 shrink-0" />
             <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em]">Daily output</span>
           </div>
-          <span className="text-[17px] font-black text-white tabular-nums tracking-tight">
+          <span className="text-[17px] font-black text-red-400 tabular-nums tracking-tight">
             ₹{dailyStats.expense.toLocaleString()}
           </span>
         </div>
@@ -484,7 +484,7 @@ export function LedgerView() {
                                 onChange={e => setEditFormData(prev => ({...prev, amount: e.target.value}))}
                                 className={clsx(
                                   "w-20 bg-transparent border-b border-white/20 text-[13px] font-black tabular-nums tracking-tight text-right focus:outline-none focus:border-accent",
-                                  editFormData.type === 'income' ? "text-green-400" : "text-white"
+                                  editFormData.type === 'income' ? "text-green-400" : "text-red-400"
                                 )}
                                 placeholder="0"
                               />
@@ -547,7 +547,7 @@ export function LedgerView() {
                         <td className="px-4 py-2 text-right">
                           <span className={clsx(
                             "text-[13px] font-black tabular-nums tracking-tight",
-                            log.type === 'income' ? "text-green-400" : "text-white"
+                            log.type === 'income' ? "text-green-400" : "text-red-400"
                           )}>
                             {log.type === 'income' ? '+' : '-'}₹{log.amount.toLocaleString()}
                           </span>
