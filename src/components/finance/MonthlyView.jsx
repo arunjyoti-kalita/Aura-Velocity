@@ -222,7 +222,7 @@ export function MonthlyView() {
               <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Intake</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-white/30" />
+              <div className="w-2 h-2 rounded-full bg-red-500/60" />
               <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Output</span>
             </div>
           </div>
@@ -263,7 +263,7 @@ export function MonthlyView() {
                         <div
                           className={clsx(
                             "w-1 rounded-t-full transition-all duration-500",
-                            isToday ? "bg-accent" : "bg-white/20"
+                            isToday ? "bg-red-400" : "bg-red-500/40"
                           )}
                           style={{ height: `${expenseHeight}px` }}
                         />
@@ -348,9 +348,9 @@ export function MonthlyView() {
                 <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-1">Daily income</p>
                 <p className="text-lg font-black text-green-400">₹{activeDayStats.income.toLocaleString()}</p>
               </div>
-              <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl border-l-2 border-l-accent/60">
+              <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl border-l-2 border-l-red-500/60">
                 <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-1">Daily expense</p>
-                <p className="text-lg font-black text-white">₹{activeDayStats.expense.toLocaleString()}</p>
+                <p className="text-lg font-black text-red-400">₹{activeDayStats.expense.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -408,9 +408,9 @@ export function MonthlyView() {
                 <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-1">Monthly income</p>
                 <p className="text-lg font-black text-green-400">₹{monthlyTotals.income.toLocaleString()}</p>
               </div>
-              <div className="p-4 bg-white/5 border border-white/10 rounded-xl border-l-2 border-l-accent/70">
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl border-l-2 border-l-red-500/60">
                 <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-1">Monthly expense</p>
-                <p className="text-lg font-black text-white">₹{monthlyTotals.expense.toLocaleString()}</p>
+                <p className="text-lg font-black text-red-400">₹{monthlyTotals.expense.toLocaleString()}</p>
               </div>
             </div>
 
