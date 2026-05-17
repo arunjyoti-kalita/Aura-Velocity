@@ -102,18 +102,19 @@ export function TaskView() {
   return (
     <div className="flex flex-col h-full bg-[#0d0d0f] overflow-hidden animate-in fade-in duration-500">
       {/* Sub-header Hero Area */}
-      <div className="px-8 pt-12 pb-8 shrink-0">
+      <div className="px-8 pt-8 pb-4 shrink-0 bg-transparent">
         <div className="max-w-4xl mx-auto flex items-end justify-between gap-8">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+              TASK FLOW · STREAM MODULE
+            </span>
             <div className="flex items-center gap-2">
-              <Calendar size={12} className="text-orange-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/80">
-                {format(currentDate, 'EEEE, MMM do').toUpperCase()}
-              </span>
+              <List size={20} className="text-accent" />
+              <h2 className="text-lg font-black text-white tracking-tighter">Task Flow</h2>
             </div>
-            <h1 className="text-4xl font-black text-white tracking-tight leading-none uppercase">
-              Task <span className="text-white/20">Flow</span>
-            </h1>
+            <span className="text-[11px] font-black text-white/40">
+              {format(currentDate, 'EEEE, MMMM do, yyyy')}
+            </span>
           </div>
 
           <div className="flex items-center gap-6 pb-1">

@@ -171,5 +171,5 @@ export function calculateSubtractionScore(pattern) {
     score += 15;
   }
 
-  return Math.max(0, Math.min(100, score));
+  return Math.round(Math.max(0, Math.min(100, score)));
 }

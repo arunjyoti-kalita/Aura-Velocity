@@ -183,13 +183,25 @@ function generateLocalSubtractionProposal(patterns) {
   const topPatterns = sorted.slice(0, 5);
   
   const proposals = topPatterns.map(p => {
-    const score = p.subtractionScore || 0;
+    const score = Math.round(p.subtractionScore || 0);
     let type = 'question';
     let proposedHours = p.hoursPerWeek;
     
     if (score >= 80) { type = 'eliminate'; proposedHours = 0; }
     else if (score >= 60) { type = 'reduce'; proposedHours = Math.round(p.hoursPerWeek * 0.3 * 10) / 10; }
     else if (score >= 40) { type = 'merge'; proposedHours = Math.round(p.hoursPerWeek * 0.6 * 10) / 10; }
+    
+    const weeklyHoursFormatted = (Math.round(p.hoursPerWeek * 10) / 10).toFixed(1);
+    let rationale = `Low satisfaction detected. Retain energy and focus.`;
+    if (type === 'eliminate') {
+      rationale = `Averages ${weeklyHoursFormatted}h/week on ${p.activityName} with high regret rating. Recommend purging to free up time.`;
+    } else if (type === 'reduce') {
+      rationale = `Spent ${weeklyHoursFormatted}h/week here. Reducing this allows reallocation of time to more high-leverage goals.`;
+    } else if (type === 'merge') {
+      rationale = `Averages ${weeklyHoursFormatted}h/week. Recommend merging with other collaborative blocks to reduce context-switching.`;
+    } else {
+      rationale = `Averages ${weeklyHoursFormatted}h/week. Review if this frequency actually aligns with your long-term focus plan.`;
+    }
     
     return {
       type,
@@ -198,7 +210,7 @@ function generateLocalSubtractionProposal(patterns) {
       currentHoursPerWeek: Math.round(p.hoursPerWeek * 10) / 10,
       proposedHoursPerWeek: proposedHours,
       hoursReclaimed: Math.round((p.hoursPerWeek - proposedHours) * 10) / 10,
-      rationale: `This pattern scores ${score}/100 on subtraction analysis. ${p.avgRegret && p.avgRegret < 3 ? 'Low satisfaction detected.' : 'Review whether this serves your goals.'}`,
+      rationale,
       challenge: `Would you notice if this disappeared for 30 days?`
     };
   });

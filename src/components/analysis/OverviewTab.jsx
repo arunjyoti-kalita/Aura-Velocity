@@ -150,19 +150,19 @@ export function OverviewTab({ logs, activities }) {
 
 function StatCard({ title, value, suffix, subtitle, icon: Icon, color }) {
   return (
-    <div className="bg-gray-900/40 border border-gray-800/50 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700/50 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-gray-500 font-bold text-[10px] uppercase tracking-widest">{title}</span>
-        <div className={`p-1.5 bg-gray-800/50 rounded-lg ${color}`}>
-          <Icon size={16} />
+    <div className="bg-gray-900/40 border border-gray-800/50 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700/50 transition-colors gap-3">
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{title}</span>
+        <div className={`p-1 bg-gray-800/30 rounded ${color}`}>
+          <Icon size={14} />
         </div>
       </div>
-      <div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-black text-white tracking-tight">{value}</span>
-          {suffix && <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{suffix}</span>}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline gap-1">
+          <span className="text-[28px] font-black text-white tracking-tight leading-none">{value}</span>
+          {suffix && <span className="text-[12px] font-medium text-gray-500 lowercase ml-1">{suffix}</span>}
         </div>
-        {subtitle && <div className="text-[10px] font-bold text-gray-600 mt-1 uppercase tracking-tighter">{subtitle}</div>}
+        {subtitle && <div className="text-[12px] font-medium text-gray-600 uppercase tracking-widest">{subtitle}</div>}
       </div>
     </div>
   );

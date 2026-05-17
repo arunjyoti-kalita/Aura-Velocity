@@ -4,9 +4,9 @@ import { useApp } from '../../contexts/useApp';
 import { 
   Plus, Trash2, Edit3, ChevronLeft, ChevronRight, 
   Calendar, Search, Filter, ArrowUpRight, ArrowDownRight, 
-  Wallet, ShoppingCart, Coffee, Car, Home, Zap, Heart
+  Wallet, ShoppingCart, Coffee, Car, Home, Zap, Heart, Check, X
 } from 'lucide-react';
-import { format, isSameDay, startOfDay, endOfDay, isToday } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
 import clsx from 'clsx';
 
 const CATEGORY_ICONS = {
@@ -20,12 +20,33 @@ const CATEGORY_ICONS = {
   default: Wallet
 };
 
+const CATEGORY_COLORS = {
+  food:      'bg-orange-500',
+  shopping:  'bg-pink-500',
+  transport: 'bg-blue-500',
+  housing:   'bg-purple-500',
+  utilities: 'bg-yellow-500',
+  health:    'bg-green-500',
+  vice:      'bg-red-500',
+  general:   'bg-white',
+};
+
 export function LedgerView() {
   const { 
-    financeLogs, deleteFinanceLog, setActiveModal, 
+    financeLogs, deleteFinanceLog, updateFinanceLog, setActiveModal, 
     triggerMechanicalFeedback, financeSelectedDate, setFinanceSelectedDate 
   } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'timestamp', dir: 'desc' });
+  const [filterActive, setFilterActive] = useState(false);
+  
+  const [editingLogId, setEditingLogId] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+
+  const handleSort = (key) => setSortConfig(prev => ({
+    key,
+    dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc'
+  }));
 
   // Filter logs for the selected date and search query
   const dailyLogs = useMemo(() => {
@@ -40,7 +61,39 @@ export function LedgerView() {
     });
   }, [financeLogs, financeSelectedDate, searchQuery]);
 
-  // Calculate daily totals
+  // Sorted version of daily logs
+  const sortedLogs = useMemo(() => {
+    return [...dailyLogs].sort((a, b) => {
+      let aVal = a[sortConfig.key] ?? '';
+      let bVal = b[sortConfig.key] ?? '';
+      if (sortConfig.key === 'amount') { aVal = Number(aVal); bVal = Number(bVal); }
+      if (aVal < bVal) return sortConfig.dir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [dailyLogs, sortConfig]);
+
+  // Sort header helper
+  const SortTh = ({ label, sortKey, align = 'left' }) => {
+    const active = sortConfig.key === sortKey;
+    return (
+      <th
+        className={`px-4 py-2 text-${align} cursor-pointer select-none group`}
+        onClick={() => handleSort(sortKey)}
+      >
+        <span className={clsx(
+          'text-[10px] font-black uppercase tracking-[0.25em] transition-colors inline-flex items-center gap-1',
+          active ? 'text-accent' : 'text-white/40 group-hover:text-white/60'
+        )}>
+          {label}
+          <span className="text-[9px] opacity-70">
+            {active ? (sortConfig.dir === 'asc' ? '↑' : '↓') : '↕'}
+          </span>
+        </span>
+      </th>
+    );
+  };
+
   const dailyStats = useMemo(() => {
     return dailyLogs.reduce((acc, log) => {
       if (log.type === 'income') acc.income += log.amount;
@@ -49,7 +102,6 @@ export function LedgerView() {
     }, { income: 0, expense: 0 });
   }, [dailyLogs]);
 
-  // Calculate category-wise breakdown for the day
   const categoryStats = useMemo(() => {
     const stats = {};
     dailyLogs.forEach(log => {
@@ -58,11 +110,9 @@ export function LedgerView() {
         stats[cat] = (stats[cat] || 0) + (log.amount || 0);
       }
     });
-    
     const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
     const maxBurn = sorted.length > 0 ? { id: sorted[0][0], amount: sorted[0][1] } : null;
     const totalExpense = dailyLogs.filter(l => l.type === 'expense').reduce((sum, l) => sum + l.amount, 0);
-    
     return { breakdown: sorted, maxBurn, totalExpense };
   }, [dailyLogs]);
 
@@ -74,263 +124,447 @@ export function LedgerView() {
 
   const handleEdit = (log) => {
     triggerMechanicalFeedback('click');
-    setActiveModal({ type: 'add_transaction', data: log });
+    setEditingLogId(log.id);
+    setEditFormData({
+      payee: log.payee,
+      amount: log.amount,
+      category: log.category || 'general',
+      account: log.account || 'Axis',
+      type: log.type,
+      timestamp: log.timestamp
+    });
   };
 
+  const handleSaveEdit = () => {
+    if (!editFormData.payee || !editFormData.amount) return;
+    triggerMechanicalFeedback('clunk');
+    updateFinanceLog(editingLogId, {
+      ...editFormData,
+      amount: parseFloat(editFormData.amount) || 0
+    });
+    setEditingLogId(null);
+    setEditFormData({});
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLogId(null);
+    setEditFormData({});
+  };
+
+  const delta = dailyStats.income - dailyStats.expense;
+
   return (
-    <div className="flex flex-col gap-6 p-6 md:p-10 max-w-7xl mx-auto w-full h-full overflow-y-auto scrollbar-hide">
-      {/* Ledger Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-            <span className="text-[10px] font-black text-accent uppercase tracking-[0.3em]">System Module</span>
+    <div className="flex flex-col gap-2 p-3 md:p-4 max-w-7xl mx-auto w-full h-full overflow-y-auto scrollbar-hide">
+
+      {/* ── TOP NAV ── */}
+      <div className="flex flex-col gap-4 mb-6 shrink-0">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+            RESOURCE FLOW · LEDGER MODULE
+          </span>
+          <div className="flex items-center gap-2">
+            <Wallet size={20} className="text-accent" />
+            <h2 className="text-lg font-black text-white tracking-tighter">Transaction Ledger</h2>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Transaction Ledger</h1>
-          <p className="text-white/40 text-[10px] font-medium uppercase tracking-[0.2em] mt-1">Manual Input & Verification Protocol</p>
+          <span className="text-[11px] font-black text-white/40">
+            Manual input & verification · {format(financeSelectedDate, 'dd MMM yyyy')}
+          </span>
         </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-white/[0.03] border border-white/10 rounded-2xl p-1">
-            <button 
+        
+        <div className="flex items-center justify-between">
+          {/* Date nav */}
+          <div className="flex items-center bg-white/[0.03] border border-white/10 rounded-xl p-0.5">
+            <button
               onClick={() => setFinanceSelectedDate(prev => {
-                const next = new Date(prev);
-                next.setDate(next.getDate() - 1);
-                return next;
+                const next = new Date(prev); next.setDate(next.getDate() - 1); return next;
               })}
-              className="p-2 text-white/20 hover:text-white transition-colors"
+              className="p-1.5 text-white/30 hover:text-white transition-colors"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={14} />
             </button>
-            <div className="flex flex-col items-center min-w-[220px] px-4">
-              <span className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-1">Active Ledger</span>
-              <div className="flex items-center gap-3">
-                <h3 className="text-xl font-black text-white tracking-tighter">
-                  {format(financeSelectedDate, 'dd MMMM yyyy').toUpperCase()}
-                </h3>
-                {isToday(financeSelectedDate) && (
-                  <span className="px-2 py-0.5 bg-accent/20 border border-accent/40 rounded-md text-[8px] font-black text-accent uppercase tracking-widest">Today</span>
-                )}
-              </div>
+            <div className="flex items-center gap-2 px-3">
+              <span className="text-[11px] font-black text-white tracking-tight">
+                {format(financeSelectedDate, 'dd MMM yyyy').toUpperCase()}
+              </span>
+              {isToday(financeSelectedDate) && (
+                <span className="px-1.5 py-0.5 bg-accent/20 border border-accent/40 rounded text-[7px] font-black text-accent uppercase tracking-widest">Today</span>
+              )}
             </div>
-            <button 
+            <button
               onClick={() => setFinanceSelectedDate(prev => {
-                const next = new Date(prev);
-                next.setDate(next.getDate() + 1);
-                return next;
+                const next = new Date(prev); next.setDate(next.getDate() + 1); return next;
               })}
-              className="p-3 text-white/40 hover:text-white transition-colors"
+              className="p-1.5 text-white/30 hover:text-white transition-colors"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={14} />
             </button>
           </div>
 
-          <button 
+          {/* CTA */}
+          <button
             onClick={() => {
               const now = new Date();
               const entryDate = new Date(financeSelectedDate);
               entryDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-              setActiveModal({ 
-                type: 'add_transaction', 
-                data: { timestamp: entryDate.toISOString() } 
-              });
+              setActiveModal({ type: 'add_transaction', data: { timestamp: entryDate.toISOString() } });
             }}
-            className="flex items-center gap-2 px-6 py-4 bg-accent text-bg-base rounded-2xl font-black text-[12px] uppercase tracking-widest hover:scale-[1.05] active:scale-[0.95] transition-all shadow-[0_10px_30px_rgba(var(--color-accent),0.2)]"
+            className="flex items-center gap-1.5 px-3 py-2 bg-accent text-bg-base rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-[0_6px_20px_rgba(var(--color-accent),0.25)]"
           >
-            <Plus size={18} strokeWidth={3} />
-            <span>Initialize Entry</span>
+            <Plus size={13} strokeWidth={3} />
+            <span>+ New Entry</span>
           </button>
         </div>
       </div>
 
-      {/* Daily Snapshot Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Daily Intake</span>
-            <div className="p-2 bg-green-500/10 rounded-xl text-green-400">
-              <ArrowUpRight size={16} />
-            </div>
+      {/* ── ROW 1: METRIC CARDS (60px, horizontal) ── */}
+      <div className="grid grid-cols-3 gap-2 shrink-0">
+        {/* Daily Intake — green */}
+        <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 border-l-2 border-l-green-500/70">
+          <div className="flex items-center gap-2">
+            <ArrowUpRight size={14} className="text-green-400 shrink-0" />
+            <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em]">Daily intake</span>
           </div>
-          <p className="text-xl font-black tabular-nums tracking-tighter">₹{dailyStats.income.toLocaleString()}</p>
+          <span className="text-[17px] font-black text-green-400 tabular-nums tracking-tight">
+            ₹{dailyStats.income.toLocaleString()}
+          </span>
         </div>
 
-        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Daily Output</span>
-            <div className="p-2 bg-white/5 rounded-xl text-white/40">
-              <ArrowDownRight size={16} />
-            </div>
+        {/* Daily Output — red/orange */}
+        <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 border-l-2 border-l-red-400/60">
+          <div className="flex items-center gap-2">
+            <ArrowDownRight size={14} className="text-red-400/70 shrink-0" />
+            <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em]">Daily output</span>
           </div>
-          <p className="text-xl font-black text-white tabular-nums tracking-tighter">₹{dailyStats.expense.toLocaleString()}</p>
+          <span className="text-[17px] font-black text-white tabular-nums tracking-tight">
+            ₹{dailyStats.expense.toLocaleString()}
+          </span>
         </div>
 
-        <div className="bg-accent/[0.03] border border-accent/20 rounded-[1.5rem] p-4 flex flex-col gap-2 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent/10 transition-all duration-700" />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-accent/60 uppercase tracking-[0.2em]">Daily Delta</span>
-            <Calendar size={16} className="text-accent/40" />
+        {/* Daily Delta — neutral */}
+        <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 border-l-2 border-l-white/20">
+          <div className="flex items-center gap-2">
+            <Calendar size={14} className="text-white/30 shrink-0" />
+            <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em]">Daily delta</span>
           </div>
-          <p className={clsx(
-            "text-3xl font-black tabular-nums tracking-tighter",
-            dailyStats.income - dailyStats.expense >= 0 ? "text-accent" : "text-red-400"
+          <span className={clsx(
+            "text-[17px] font-black tabular-nums tracking-tight",
+            delta >= 0 ? "text-green-400" : "text-red-400"
           )}>
-            {dailyStats.income - dailyStats.expense >= 0 ? '+' : ''}₹{(dailyStats.income - dailyStats.expense).toLocaleString()}
-          </p>
+            {delta >= 0 ? '+' : ''}₹{delta.toLocaleString()}
+          </span>
         </div>
       </div>
 
-      {/* Analytics Insight Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Max Burn Box */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] p-4 flex items-center gap-6 group hover:bg-white/[0.04] transition-all">
-          <div className="shrink-0 w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+      {/* ── ROW 2: ANALYTICS (3-col, 80px) ── */}
+      <div className="grid grid-cols-3 gap-2 shrink-0">
+
+        {/* Col 1: Top Expense */}
+        <div className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="shrink-0 w-9 h-9 bg-white/5 rounded-xl flex items-center justify-center">
             {categoryStats.maxBurn ? (() => {
               const Icon = CATEGORY_ICONS[categoryStats.maxBurn.id?.toLowerCase()] || CATEGORY_ICONS.default;
-              return <Icon size={32} className="text-white/40" />;
-            })() : '🛡️'}
+              return <Icon size={16} className="text-white/50" />;
+            })() : <Wallet size={16} className="text-white/20" />}
           </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-2">Dominant Outflow</p>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[8px] font-black text-accent uppercase tracking-[0.25em] mb-0.5">Top Expense</span>
             {categoryStats.maxBurn ? (
-              <div className="flex items-end gap-3">
-                <h3 className="text-xl font-black text-white tracking-tighter uppercase">{categoryStats.maxBurn.id}</h3>
-                <span className="text-sm font-black text-white/40 mb-1 tabular-nums">₹{categoryStats.maxBurn.amount.toLocaleString()}</span>
-              </div>
+              <>
+                <span className="text-[12px] font-black text-white uppercase tracking-tight truncate">
+                  {categoryStats.maxBurn.id}
+                </span>
+                <span className="text-[10px] font-black text-white/50 tabular-nums">
+                  ₹{categoryStats.maxBurn.amount.toLocaleString()}
+                </span>
+              </>
             ) : (
-              <h3 className="text-xl font-black text-white/10 tracking-tighter uppercase">No Outflow Recorded</h3>
+              <span className="text-[11px] font-black text-white/20 uppercase">No Data</span>
             )}
           </div>
         </div>
 
-        {/* Category Bar Graph Box */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] p-4">
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-6 text-center">Burn Distribution</p>
-          <div className="space-y-4">
-            {categoryStats.breakdown.length > 0 ? categoryStats.breakdown.slice(0, 3).map(([cat, amount], idx) => {
-              const percentage = (amount / categoryStats.totalExpense) * 100;
-              return (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex justify-between text-[8px] font-black text-white/40 uppercase tracking-widest">
-                    <span>{cat}</span>
-                    <span>{Math.round(percentage)}%</span>
+        {/* Col 2: Burn Distribution */}
+        <div className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3">
+          <span className="text-[8px] font-black text-white/50 uppercase tracking-[0.25em] block mb-2">Burn Distribution</span>
+          {categoryStats.breakdown.length > 0 ? (
+            <div className="space-y-1.5">
+              {categoryStats.breakdown.slice(0, 2).map(([cat, amount], idx) => {
+                const pct = categoryStats.totalExpense > 0
+                  ? Math.round((amount / categoryStats.totalExpense) * 100) : 0;
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-white/40 uppercase w-12 truncate shrink-0">{cat}</span>
+                    <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: idx * 0.1 }}
+                        className="h-full bg-accent/70 rounded-full"
+                      />
+                    </div>
+                    <span className="text-[8px] font-black text-white/50 tabular-nums w-7 text-right shrink-0">{pct}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      transition={{ duration: 1, delay: idx * 0.1 }}
-                      className="h-full bg-accent/60 rounded-full"
-                    />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-8 border border-dashed border-white/10 rounded-lg">
+              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">No data</span>
+            </div>
+          )}
+        </div>
+
+        {/* Col 3: Daily Spend by Category — horizontal mini bar chart */}
+        <div className="bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3">
+          <span className="text-[8px] font-black text-white/50 uppercase tracking-[0.25em] block mb-2">Daily by Category</span>
+          {categoryStats.breakdown.length > 0 ? (
+            <div className="space-y-1.5">
+              {categoryStats.breakdown.slice(0, 3).map(([cat, amount], idx) => {
+                const barPct = categoryStats.totalExpense > 0
+                  ? Math.max(8, (amount / categoryStats.totalExpense) * 100) : 8;
+                const colorClass = CATEGORY_COLORS[cat] || 'bg-white';
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className={clsx('w-1.5 h-1.5 rounded-full shrink-0', colorClass)} />
+                    <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${barPct}%` }}
+                        transition={{ duration: 0.8, delay: idx * 0.1 }}
+                        className={clsx('h-full rounded-full opacity-70', colorClass)}
+                      />
+                    </div>
+                    <span className="text-[8px] font-black text-white/50 tabular-nums w-12 text-right shrink-0">
+                      ₹{amount.toLocaleString()}
+                    </span>
                   </div>
-                </div>
-              );
-            }) : (
-              <div className="h-12 flex items-center justify-center border border-dashed border-white/10 rounded-xl">
-                <p className="text-[8px] font-black text-white/5 uppercase tracking-widest italic">Insufficient data for distribution map</p>
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-8 border border-dashed border-white/10 rounded-lg">
+              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">No data</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="flex items-center gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-        <Search size={18} className="text-white/20 ml-2" />
-        <input 
+      {/* ── ROW 3: SEARCH BAR (36px) ── */}
+      <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl px-3 h-9 shrink-0">
+        <Search size={13} className="text-white/30 shrink-0" />
+        <input
           type="text"
-          placeholder="SEARCH LEDGER..."
+          placeholder="Search ledger..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 bg-transparent border-none outline-none text-[10px] font-black text-white placeholder:text-white/10 uppercase tracking-widest"
+          className="flex-1 bg-transparent border-none outline-none text-[12px] font-medium text-white placeholder:text-white/20 tracking-wide"
         />
-        <div className="h-6 w-px bg-white/10 mx-2" />
-        <button className="p-2 text-white/40 hover:text-white transition-colors">
-          <Filter size={18} />
+        <div className="h-4 w-px bg-white/10" />
+        <button
+          onClick={() => setFilterActive(p => !p)}
+          className={clsx(
+            'relative p-1 transition-colors',
+            filterActive ? 'text-accent' : 'text-white/30 hover:text-white'
+          )}
+        >
+          <Filter size={13} />
+          {filterActive && (
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-accent rounded-full" />
+          )}
         </button>
       </div>
 
-      {/* Ledger Table */}
-      <div className="flex flex-col gap-2 relative">
-        {/* Scanline Effect */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] z-50 rounded-3xl" />
+      {/* ── ROW 4: LEDGER TABLE ── */}
+      <div className="flex-1 flex flex-col gap-0 relative min-h-0">
+        {/* Scanline */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_2px] z-50 rounded-2xl" />
 
         <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-y-2">
+          <table className="w-full border-separate border-spacing-y-1">
             <thead>
-              <tr className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em]">
-                <th className="px-6 py-4 text-left">Timestamp</th>
-                <th className="px-6 py-4 text-left">Payee / Description</th>
-                <th className="px-6 py-4 text-left">Category</th>
-                <th className="px-6 py-4 text-left">Account</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4 text-center">Actions</th>
+              <tr>
+                <SortTh label="Time"     sortKey="timestamp" />
+                <SortTh label="Payee"    sortKey="payee" />
+                <SortTh label="Category" sortKey="category" />
+                <SortTh label="Account"  sortKey="account" />
+                <SortTh label="Amount"   sortKey="amount" align="right" />
+                <th className="px-4 py-2 w-16" />
               </tr>
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {dailyLogs.length === 0 ? (
+                {sortedLogs.length === 0 ? (
                   <motion.tr
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    <td colSpan="6" className="text-center py-20 bg-white/[0.01] border border-white/5 rounded-3xl border-dashed">
-                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/10">No records found for this cycle</p>
+                    <td colSpan="6" className="text-center py-8">
+                      <div className="flex flex-col items-center gap-4 border border-dashed border-white/10 rounded-2xl py-10 bg-white/[0.01]">
+                        <Wallet size={22} className="text-white/10" />
+                        <div className="flex flex-col items-center gap-1">
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">No entries for this day</p>
+                          <p className="text-[9px] font-black text-white/15 uppercase tracking-widest">Log your first transaction below</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const now = new Date();
+                            const entryDate = new Date(financeSelectedDate);
+                            entryDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+                            setActiveModal({ type: 'add_transaction', data: { timestamp: entryDate.toISOString() } });
+                          }}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-accent/10 border border-accent/30 text-accent rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-accent hover:text-bg-base transition-all"
+                        >
+                          <Plus size={12} strokeWidth={3} />
+                          New Entry
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ) : (
-                  dailyLogs.map((log) => {
+                  sortedLogs.map((log) => {
                     const Icon = CATEGORY_ICONS[log.category?.toLowerCase()] || CATEGORY_ICONS.default;
+                    
+                    if (editingLogId === log.id) {
+                      return (
+                        <motion.tr
+                          key={log.id}
+                          layout
+                          className="bg-white/[0.05] border border-white/10"
+                        >
+                          <td className="px-4 py-2 rounded-l-xl">
+                            <span className="text-[10px] font-black text-white/50 tabular-nums">
+                              {format(new Date(log.timestamp), 'HH:mm')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              autoFocus
+                              value={editFormData.payee || ''}
+                              onChange={e => setEditFormData(prev => ({...prev, payee: e.target.value}))}
+                              className="w-full bg-transparent border-b border-white/20 text-[11px] font-black text-white uppercase tracking-tight focus:outline-none focus:border-accent"
+                              placeholder="PAYEE"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={editFormData.category || 'general'}
+                              onChange={e => setEditFormData(prev => ({...prev, category: e.target.value}))}
+                              className="w-full bg-bg-base border border-white/10 text-[10px] font-black text-white/80 uppercase tracking-widest rounded px-1 py-0.5 focus:outline-none focus:border-accent"
+                            >
+                              {Object.keys(CATEGORY_ICONS).filter(k => k !== 'default').map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={editFormData.account || 'Axis'}
+                              onChange={e => setEditFormData(prev => ({...prev, account: e.target.value}))}
+                              className="w-full bg-bg-base border border-white/10 text-[10px] font-black text-white/80 uppercase tracking-widest rounded px-1 py-0.5 focus:outline-none focus:border-accent"
+                            >
+                              <option value="Axis">Axis</option>
+                              <option value="ICICI">ICICI</option>
+                              <option value="Cash">Cash</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <select
+                                value={editFormData.type || 'expense'}
+                                onChange={e => setEditFormData(prev => ({...prev, type: e.target.value}))}
+                                className="bg-transparent text-[13px] font-black tracking-tight focus:outline-none"
+                              >
+                                <option value="income">+</option>
+                                <option value="expense">-</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={editFormData.amount || ''}
+                                onChange={e => setEditFormData(prev => ({...prev, amount: e.target.value}))}
+                                className={clsx(
+                                  "w-20 bg-transparent border-b border-white/20 text-[13px] font-black tabular-nums tracking-tight text-right focus:outline-none focus:border-accent",
+                                  editFormData.type === 'income' ? "text-green-400" : "text-white"
+                                )}
+                                placeholder="0"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 rounded-r-xl text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={handleSaveEdit}
+                                className="p-1.5 text-green-400 hover:text-green-300 transition-colors rounded-md hover:bg-green-400/10"
+                              >
+                                <Check size={14} strokeWidth={3} />
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-1.5 text-white/40 hover:text-white transition-colors rounded-md hover:bg-white/5"
+                              >
+                                <X size={14} strokeWidth={3} />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    }
+
                     return (
-                      <motion.tr 
+                      <motion.tr
                         key={log.id}
                         layout
-                        initial={{ opacity: 0, x: -20 }}
+                        initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
                         className="group bg-white/[0.02] hover:bg-white/[0.04] border border-white/0 hover:border-white/5 transition-all"
                       >
-                        <td className="px-6 py-2 rounded-l-2xl">
-                          <span className="text-[10px] font-black text-white/40 group-hover:text-white/60 tabular-nums">
-                            {format(new Date(log.timestamp), 'HH:mm:ss')}
+                        <td className="px-4 py-2 rounded-l-xl">
+                          <span className="text-[10px] font-black text-white/50 group-hover:text-white/70 tabular-nums">
+                            {format(new Date(log.timestamp), 'HH:mm')}
                           </span>
                         </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
-                              <Icon size={14} />
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-white/40 shrink-0">
+                              <Icon size={12} />
                             </div>
-                            <span className="text-xs font-black text-white uppercase tracking-tight">{log.payee}</span>
+                            <span className="text-[11px] font-black text-white uppercase tracking-tight truncate max-w-[120px]">
+                              {log.payee}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-6 py-2">
-                          <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{log.category}</span>
+                        <td className="px-4 py-2">
+                          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+                            {log.category || '—'}
+                          </span>
                         </td>
-                        <td className="px-6 py-2">
-                          <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{log.account}</span>
+                        <td className="px-4 py-2">
+                          <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+                            {log.account || '—'}
+                          </span>
                         </td>
-                        <td className="px-6 py-2 text-right">
+                        <td className="px-4 py-2 text-right">
                           <span className={clsx(
-                            "text-sm font-black tabular-nums tracking-tighter",
+                            "text-[13px] font-black tabular-nums tracking-tight",
                             log.type === 'income' ? "text-green-400" : "text-white"
                           )}>
                             {log.type === 'income' ? '+' : '-'}₹{log.amount.toLocaleString()}
                           </span>
                         </td>
-                        <td className="px-6 py-2 rounded-r-2xl text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
+                        <td className="px-4 py-2 rounded-r-xl text-center">
+                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
                               onClick={() => handleEdit(log)}
-                              className="p-2 text-white/20 hover:text-accent transition-colors"
+                              className="p-1.5 text-white/30 hover:text-accent transition-colors rounded-md hover:bg-white/5"
                             >
-                              <Edit3 size={14} />
+                              <Edit3 size={12} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleDelete(log.id)}
-                              className="p-2 text-white/20 hover:text-red-400 transition-colors"
+                              className="p-1.5 text-white/30 hover:text-red-400 transition-colors rounded-md hover:bg-red-500/5"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={12} />
                             </button>
                           </div>
                         </td>

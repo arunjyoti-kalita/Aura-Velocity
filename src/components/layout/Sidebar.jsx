@@ -200,7 +200,7 @@ export function Sidebar({ onOpenSearch }) {
           className="flex items-center justify-center gap-2 w-full h-10 bg-accent text-bg-base rounded-lg shadow-[0_4px_20px_rgba(var(--color-accent),0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all group"
         >
           <Plus size={16} strokeWidth={2} />
-          <span className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] pt-0.5">Initialize</span>
+          <span className="font-heading text-[10px] font-semibold uppercase tracking-[0.15em] pt-0.5">+ New Entry</span>
         </button>
 
         {/* Modules Section - Structured List */}

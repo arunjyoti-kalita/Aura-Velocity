@@ -461,14 +461,22 @@ export function AppProvider({ children }) {
     } catch (e) { return []; }
   });
 
+  const [financeBudgets, setFinanceBudgets] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_velocity_finance_budgets');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+
   const [financeSelectedDate, setFinanceSelectedDate] = useState(new Date());
 
   useEffect(() => {
     if (!user) {
       localStorage.setItem('aura_velocity_finance_logs', JSON.stringify(financeLogs));
       localStorage.setItem('aura_velocity_financial_goals', JSON.stringify(financialGoals));
+      localStorage.setItem('aura_velocity_finance_budgets', JSON.stringify(financeBudgets));
     }
-  }, [financeLogs, financialGoals, user]);
+  }, [financeLogs, financialGoals, financeBudgets, user]);
 
   const addFinanceLog = useCallback(async (log) => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -2559,6 +2567,8 @@ export function AppProvider({ children }) {
     saveFinancialGoal,
     deleteFinancialGoal,
     setFinanceLogs,
+    financeBudgets,
+    setFinanceBudgets,
     financeSelectedDate,
     setFinanceSelectedDate
   };

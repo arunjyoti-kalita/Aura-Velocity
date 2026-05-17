@@ -142,8 +142,13 @@ export function JournalView() {
                         {entry.title || 'Untitled'}
                       </h4>
                       <p className="text-[11px] text-gray-600 font-medium truncate mb-2">
-                        {(entry.content || '').substring(0, 60)}
-                        {(entry.content || '').length > 60 ? '...' : ''}
+                        {(() => {
+                          const content = (entry.content || '').trim().replace(/\s+/g, ' ');
+                          if (content.length <= 60) return content;
+                          const truncated = content.substring(0, 60);
+                          const lastSpace = truncated.lastIndexOf(' ');
+                          return (lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated) + '...';
+                        })()}
                       </p>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-700 uppercase tracking-tighter">

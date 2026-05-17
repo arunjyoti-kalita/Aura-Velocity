@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../../contexts/useApp';
-import { Wallet, TrendingUp, ArrowDownRight, ArrowUpRight, Plus, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, ArrowDownRight, ArrowUpRight, Plus, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LiquidityPulse } from './LiquidityPulse';
 import { TerminalFeed } from './TerminalFeed';
-import { startOfMonth, isWithinInterval, endOfMonth } from 'date-fns';
+import { startOfMonth, isWithinInterval, endOfMonth, format } from 'date-fns';
 import clsx from 'clsx';
 
 export function FinanceModule() {
-  const { liquidityPulse, financeLogs, setFinanceLogs, setActiveModal, financeSelectedDate, triggerMechanicalFeedback } = useApp();
+  const { liquidityPulse, financeLogs, setFinanceLogs, setActiveModal, financeSelectedDate, setFinanceSelectedDate, triggerMechanicalFeedback } = useApp();
 
   const stats = useMemo(() => {
     const start = startOfMonth(financeSelectedDate);
@@ -36,31 +36,55 @@ export function FinanceModule() {
       {/* ── STICKY TOP SECTION ── */}
       <div className="shrink-0 px-6 pt-6 pb-4 bg-transparent">
         {/* Header Section */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-4 mb-1">
-              <h1 className="font-heading text-xs font-black uppercase tracking-[0.3em] text-white/40">System Domain</h1>
-              <button 
-                onClick={() => {
-                  if (confirm("CRITICAL: This will permanently wipe ALL financial records across all months. This action cannot be undone. Proceed?")) {
-                    setFinanceLogs([]);
-                    triggerMechanicalFeedback('clunk');
-                  }
-                }}
-                className="text-[8px] font-black text-red-500/30 hover:text-red-500 transition-colors uppercase tracking-widest border border-red-500/20 hover:border-red-500/50 px-2 py-0.5 rounded"
+        <div className="flex flex-col gap-4 mb-6 shrink-0">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+              RESOURCE FLOW · SYSTEM MODULE
+            </span>
+            <div className="flex items-center gap-2">
+              <Activity size={20} className="text-accent" />
+              <h2 className="text-lg font-black text-white tracking-tighter">Terminal</h2>
+            </div>
+            <span className="text-[11px] font-black text-white/40">
+              {format(financeSelectedDate, 'MMMM yyyy')} · 1st - {new Date(financeSelectedDate.getFullYear(), financeSelectedDate.getMonth() + 1, 0).getDate()}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            {/* Date nav */}
+            <div className="flex items-center bg-white/[0.03] border border-white/10 rounded-xl p-0.5">
+              <button
+                onClick={() => setFinanceSelectedDate(prev => {
+                  const next = new Date(prev); next.setMonth(next.getMonth() - 1); return next;
+                })}
+                className="p-1.5 text-white/30 hover:text-white transition-colors"
               >
-                [ Purge Data Stream ]
+                <ChevronLeft size={14} />
+              </button>
+              <div className="flex items-center gap-2 px-3">
+                <span className="text-[11px] font-black text-white tracking-tight">
+                  {format(financeSelectedDate, 'MMM yyyy').toUpperCase()}
+                </span>
+              </div>
+              <button
+                onClick={() => setFinanceSelectedDate(prev => {
+                  const next = new Date(prev); next.setMonth(next.getMonth() + 1); return next;
+                })}
+                className="p-1.5 text-white/30 hover:text-white transition-colors"
+              >
+                <ChevronRight size={14} />
               </button>
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tighter">Resource Flow</h2>
+            
+            {/* CTA */}
+            <button 
+              onClick={() => setActiveModal({ type: 'add_transaction' })}
+              className="flex items-center gap-1.5 px-3 py-2 bg-accent text-bg-base rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-[0_6px_20px_rgba(var(--color-accent),0.25)]"
+            >
+              <Plus size={13} strokeWidth={3} />
+              <span>+ New Entry</span>
+            </button>
           </div>
-          <button 
-            onClick={() => setActiveModal({ type: 'add_transaction' })}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-bg-base rounded-lg font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(var(--color-accent),0.3)]"
-          >
-            <Plus size={14} strokeWidth={3} />
-            <span>New Entry</span>
-          </button>
         </div>
 
         {/* Main Grid */}
@@ -77,6 +101,8 @@ export function FinanceModule() {
               percentChange={12.4} 
               burnRate={stats.burnRate}
               runway={stats.runway}
+              monthlyIncome={stats.income}
+              monthlyExpense={stats.expense}
             />
           </motion.div>
 

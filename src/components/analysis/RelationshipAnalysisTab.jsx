@@ -137,14 +137,14 @@ export function RelationshipAnalysisTab() {
 
 function StatCard({ label, value, sub, icon: Icon, color }) {
   return (
-    <div className="glass-card p-4 border border-white/5 bg-white/[0.01] rounded-xl flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-[8px] font-black text-gray-600 uppercase tracking-[0.2em]">{label}</span>
+    <div className="glass-card p-4 border border-white/5 bg-white/[0.01] rounded-xl flex flex-col gap-3 hover:border-white/10 transition-colors">
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{label}</span>
         <Icon size={14} className={color} />
       </div>
-      <div className="flex flex-col">
-        <span className="text-2xl font-black text-white tracking-tight">{value}</span>
-        <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest mt-1">{sub}</span>
+      <div className="flex flex-col gap-1">
+        <span className="text-[28px] font-black text-white tracking-tight leading-none">{value}</span>
+        <span className="text-[12px] font-medium text-gray-600 uppercase tracking-widest">{sub}</span>
       </div>
     </div>
   );

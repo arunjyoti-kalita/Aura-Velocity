@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Activity } from 'lucide-react';
 
-export function LiquidityPulse({ amount, percentChange = 0, burnRate = 0, runway = 0 }) {
+export function LiquidityPulse({ amount, percentChange = 0, burnRate = 0, runway = 0, monthlyIncome = 0, monthlyExpense = 0 }) {
   const isPositive = percentChange >= 0;
 
   return (
@@ -34,23 +34,43 @@ export function LiquidityPulse({ amount, percentChange = 0, burnRate = 0, runway
         </div>
 
         <div className="flex flex-col gap-1">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-baseline gap-4"
           >
-            <span className="text-7xl font-black text-white tracking-tighter drop-shadow-2xl">
-              ₹{amount.toLocaleString()}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.25em] mb-1">Total spend this month</span>
+              <span className="text-7xl font-black text-white tracking-tighter drop-shadow-2xl">
+                ₹{monthlyExpense.toLocaleString()}
+              </span>
+            </div>
           </motion.div>
-          
+
+          {/* Income context row */}
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Income</span>
+            <span className={`text-[13px] font-black tabular-nums ${
+              monthlyIncome > 0 ? 'text-green-400' : 'text-white/20'
+            }`}>
+              {monthlyIncome > 0 ? `₹${monthlyIncome.toLocaleString()}` : '₹0 this month'}
+            </span>
+            {monthlyIncome > 0 && monthlyExpense > 0 && (
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                · {Math.round((monthlyExpense / monthlyIncome) * 100)}% of income spent
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-1 px-2 py-0.5 bg-accent/10 border border-accent/20 rounded text-accent text-[9px] font-black uppercase tracking-widest">
               <TrendingUp size={12} />
               {isPositive ? '+' : ''}{percentChange}%
             </div>
-            <div className="h-px w-12 bg-white/10" />
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Operational Pulse Stable</span>
+            <div className="h-px w-8 bg-white/10" />
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+              {isPositive ? 'Burn up' : 'Burn down'} {Math.abs(percentChange)}% vs last month
+            </span>
           </div>
         </div>
 
