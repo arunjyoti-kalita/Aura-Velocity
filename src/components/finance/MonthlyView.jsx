@@ -30,6 +30,7 @@ export function MonthlyView() {
     setFinanceBudgets, triggerMechanicalFeedback 
   } = useApp();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [activeMode, setActiveMode] = useState('BOTH');
   const [editingBudget, setEditingBudget] = useState(null);
   const [budgetInputValue, setBudgetInputValue] = useState("");
 
@@ -114,6 +115,14 @@ export function MonthlyView() {
     const dailyExpenses = Object.values(dailyStatsMap).map(s => s.expense || 0);
     return Math.max(...dailyExpenses, 1000);
   }, [dailyStatsMap]);
+
+  const todayIndex = useMemo(() => {
+    return days.findIndex(day => isSameDay(day, new Date()));
+  }, [days]);
+
+  const gridEndX = useMemo(() => {
+    return todayIndex === -1 ? 100 : ((todayIndex + 0.5) / days.length) * 100;
+  }, [days, todayIndex]);
 
   // Stats for the currently selected day
   const activeDayStats = useMemo(() => {
@@ -224,119 +233,302 @@ export function MonthlyView() {
       <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 relative overflow-hidden shrink-0">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xs font-black text-white tracking-[0.2em]">Flow matrix <span className="text-white/30">—</span> daily intake vs output</h3>
+            <h3 className="text-xs font-black text-white tracking-[0.2em]">Flow matrix</h3>
             <p className="text-[8px] font-black text-white/20 tracking-widest mt-0.5">{format(currentMonth, 'MMMM yyyy')}</p>
           </div>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500/60" />
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Intake</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center bg-white/[0.02] border border-white/5 rounded-full p-0.5 gap-1 shrink-0">
+              <button
+                onClick={() => {
+                  setActiveMode('BOTH');
+                  triggerMechanicalFeedback?.();
+                }}
+                className={clsx(
+                  "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-[20px] border-[0.5px] transition-all",
+                  activeMode === 'BOTH'
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/[0.05] border-white/10 text-white/40 hover:text-white/60"
+                )}
+              >
+                Both
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMode('INTAKE');
+                  triggerMechanicalFeedback?.();
+                }}
+                className={clsx(
+                  "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-[20px] border-[0.5px] transition-all",
+                  activeMode === 'INTAKE'
+                    ? "bg-[#4ade80]/15 border-[#4ade80] text-[#4ade80]"
+                    : "bg-white/[0.05] border-white/10 text-white/40 hover:text-white/60"
+                )}
+              >
+                Intake
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMode('OUTPUT');
+                  triggerMechanicalFeedback?.();
+                }}
+                className={clsx(
+                  "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-[20px] border-[0.5px] transition-all",
+                  activeMode === 'OUTPUT'
+                    ? "bg-[#e8622a]/15 border-[#e8622a] text-[#e8622a]"
+                    : "bg-white/[0.05] border-white/10 text-white/40 hover:text-white/60"
+                )}
+              >
+                Output
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500/60" />
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Output</span>
-            </div>
+            {activeMode === 'BOTH' && (
+              <span className="text-[9px] text-white/30 font-medium tracking-wide leading-none transition-all duration-200 select-none">
+                scales independent
+              </span>
+            )}
           </div>
         </div>
 
         {/* Baseline rule */}
-        <div className="relative">
-          <div className="flex items-end justify-between gap-px h-20 overflow-x-auto no-scrollbar">
+        <div 
+          className="relative"
+          style={{
+            background: 'radial-gradient(circle, rgba(232, 98, 42, 0.03) 0%, rgba(232, 98, 42, 0) 70%)'
+          }}
+        >
+          <div className="flex items-end justify-between gap-[2px] h-[192px] pt-[50px] overflow-y-hidden overflow-x-auto no-scrollbar">
             {days.map((day, idx) => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const { income, expense } = dailyStatsMap[dateKey] || { income: 0, expense: 0 };
-              const CHART_HEIGHT_PX = 60;
-              const incomeHeight = income > 0 ? Math.max(3, (income / intakeMax) * CHART_HEIGHT_PX) : 0;
-              const expenseHeight = expense > 0 ? Math.max(3, (expense / outputMax) * CHART_HEIGHT_PX) : 0;
+              const CHART_HEIGHT_PX = 110;
+              const incomeHeight = income > 0 ? Math.max(4, (income / intakeMax) * CHART_HEIGHT_PX) : 0;
+              const expenseHeight = expense > 0 ? Math.max(4, (expense / outputMax) * CHART_HEIGHT_PX) : 0;
               const hasData = income > 0 || expense > 0;
               const isSelected = isSameDay(day, financeSelectedDate);
               const isToday = isSameDay(day, new Date());
+              
+              const today = new Date();
+              const isFuture = isSameMonth(day, today) ? day.getDate() > today.getDate() : day > today;
+
+              const intakeStyle = {
+                width: activeMode === 'OUTPUT' ? '0px' : '8px',
+                height: activeMode === 'OUTPUT' ? '0px' : `${incomeHeight}px`,
+                opacity: activeMode === 'OUTPUT' ? 0 : isToday ? 1 : 0.8,
+                backgroundColor: isToday ? '#4ade80' : 'rgba(74, 222, 128, 0.8)',
+                boxShadow: isToday ? '0 0 10px rgba(74, 222, 128, 0.85)' : '0 0 6px rgba(74, 222, 128, 0.4)',
+                transition: 'height 300ms ease, opacity 200ms ease, width 300ms ease, box-shadow 300ms ease',
+                pointerEvents: activeMode === 'OUTPUT' ? 'none' : 'auto',
+              };
+
+              const isLargestOutput = expense === outputMax && expense > 0;
+              const outputStyle = {
+                width: activeMode === 'INTAKE' ? '0px' : '8px',
+                height: activeMode === 'INTAKE' ? '0px' : `${expenseHeight}px`,
+                opacity: activeMode === 'INTAKE' ? 0 : 1,
+                background: isLargestOutput
+                  ? 'linear-gradient(to top, rgba(232, 98, 42, 0.5) 0%, rgba(255, 124, 67, 1) 100%)'
+                  : 'linear-gradient(to top, rgba(232, 98, 42, 0.3) 0%, rgba(232, 98, 42, 1) 100%)',
+                boxShadow: isLargestOutput
+                  ? '0 0 8px rgba(232, 98, 42, 0.6)'
+                  : '0 0 4px rgba(232, 98, 42, 0.33)',
+                transition: 'height 300ms ease, opacity 200ms ease, width 300ms ease, box-shadow 300ms ease',
+                pointerEvents: activeMode === 'INTAKE' ? 'none' : 'auto',
+              };
+
+              const maxBarHeight = activeMode === 'INTAKE'
+                ? incomeHeight
+                : activeMode === 'OUTPUT'
+                  ? expenseHeight
+                  : Math.max(incomeHeight, expenseHeight);
+              const tooltipBottom = maxBarHeight + 8 + 32;
+              const tooltipStyle = {
+                bottom: `${tooltipBottom}px`,
+              };
+              if (idx < 4) {
+                tooltipStyle.left = '0%';
+                tooltipStyle.transform = 'none';
+              } else if (idx >= days.length - 4) {
+                tooltipStyle.right = '0%';
+                tooltipStyle.left = 'auto';
+                tooltipStyle.transform = 'none';
+              } else {
+                tooltipStyle.left = '50%';
+                tooltipStyle.transform = 'translateX(-50%)';
+              }
+
+              const barsGap = activeMode === 'BOTH' ? '3px' : '0px';
 
               return (
                 <button
                   key={idx}
                   onClick={() => setFinanceSelectedDate(day)}
-                  className={clsx(
-                    "flex-1 min-w-[16px] flex flex-col items-center gap-1.5 group transition-all",
-                    isSelected ? "opacity-100" : "opacity-50 hover:opacity-90"
-                  )}
+                  className="flex-1 min-w-[20px] flex flex-col items-center gap-1.5 group transition-all relative z-10"
                 >
-                  <div className="flex items-end gap-px h-[60px] w-full justify-center">
-                    {hasData ? (
+                  {/* Hover Tooltip */}
+                  {!isFuture && (
+                    <div 
+                      className="absolute w-auto min-w-[90px] max-w-[130px] bg-[#12121f] border-[0.5px] border-white/10 rounded-[6px] p-[7px_10px] opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-[80ms] group-hover:duration-[120ms] ease-out shadow-2xl z-30 flex flex-col text-left leading-[1.6]"
+                      style={tooltipStyle}
+                    >
+                      <span className="text-[11px] font-medium text-white block">
+                        {format(day, 'MMM d')}
+                      </span>
+                      <div className={`flex items-center text-[11px] font-normal text-[#4ade80] gap-1 transition-opacity ${income === 0 ? 'opacity-40' : ''}`}>
+                        <span>↑</span>
+                        <span className="tabular-nums">₹{income.toLocaleString()}</span>
+                      </div>
+                      <div className={`flex items-center text-[11px] font-normal text-[#e8622a] gap-1 transition-opacity ${expense === 0 ? 'opacity-40' : ''}`}>
+                        <span>↓</span>
+                        <span className="tabular-nums">₹{expense.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div 
+                    className="flex items-end h-[110px] w-full justify-center relative transition-all duration-300"
+                    style={{ gap: barsGap }}
+                  >
+                    {/* Selected Column Highlight (ambient glow constrained to 110px chart area) */}
+                    {isSelected && (
+                      activeMode === 'BOTH' ||
+                      (activeMode === 'INTAKE' && income > 0) ||
+                      (activeMode === 'OUTPUT' && expense > 0)
+                    ) && (
+                      <div className="absolute inset-0 bg-white/[0.05] rounded-t-[4px] rounded-b-none pointer-events-none z-0" />
+                    )}
+                    {isFuture ? (
+                      <div className="w-px h-[110px] border-l border-dotted border-white/[0.04]" />
+                    ) : hasData ? (
                       <>
                         <div
-                          className={clsx(
-                            "w-1 rounded-t-full transition-all duration-500",
-                            isToday ? "bg-green-400" : "bg-green-500/40"
-                          )}
-                          style={{ height: `${incomeHeight}px` }}
+                          className="rounded-t-[2px] rounded-b-none z-10"
+                          style={intakeStyle}
                         />
                         <div
-                          className={clsx(
-                            "w-1 rounded-t-full transition-all duration-500",
-                            isToday ? "bg-red-400" : "bg-red-500/40"
-                          )}
-                          style={{ height: `${expenseHeight}px` }}
+                          className="rounded-t-[2px] rounded-b-none z-10"
+                          style={outputStyle}
                         />
                       </>
                     ) : (
                       <div className="w-px h-1 bg-white/5 self-end" />
                     )}
+
+                    {/* Peak Output Label */}
+                    {isLargestOutput && activeMode !== 'INTAKE' && (
+                      <span 
+                        className="absolute text-[10px] font-black text-[#e8622a] tracking-tight whitespace-nowrap z-20 bg-bg-base/80 px-1 py-0.5 rounded border border-white/5 transition-opacity duration-300"
+                        style={{ 
+                          bottom: `${expenseHeight + 4}px`,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          opacity: activeMode === 'INTAKE' ? 0 : 1,
+                          pointerEvents: activeMode === 'INTAKE' ? 'none' : 'auto'
+                        }}
+                      >
+                        ₹{expense.toLocaleString()}
+                      </span>
+                    )}
                   </div>
-                  <span className={clsx(
-                    "text-[7px] font-black transition-colors",
-                    isToday ? "text-accent" : isSelected ? "text-white/70" : "text-white/20"
-                  )}>
-                    {format(day, 'd')}
-                  </span>
+                  
+                  <div className="flex flex-col items-center gap-0.5 mt-0.5 h-[18px] justify-end relative z-10">
+                    {isToday && (
+                      <span className="text-[7px] text-accent leading-none font-black select-none mb-px">▼</span>
+                    )}
+                    <span className={clsx(
+                      "text-[7px] transition-colors",
+                      isToday ? "text-accent font-black" : isFuture ? "text-white/35 font-normal" : isSelected ? "text-white/70 font-normal" : "text-white/20 font-normal"
+                    )}>
+                      {format(day, 'd')}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
-          {/* Subtle line graph overlay */}
-          <div className="absolute left-0 right-0 top-0 h-[60px] pointer-events-none">
+          {/* Subtle line graph overlay & Grid reference lines */}
+          <div className="absolute left-0 right-0 bottom-[32px] h-[110px] pointer-events-none">
             <svg className="w-full h-full" preserveAspectRatio="none">
+              {/* Horizontal grid lines */}
+              <line
+                x1="0"
+                y1="74"
+                x2={`${gridEndX}%`}
+                y2="74"
+                stroke="rgba(255, 255, 255, 0.04)"
+                strokeWidth="0.5"
+                strokeDasharray="2,2"
+              />
+              <line
+                x1="0"
+                y1="38"
+                x2={`${gridEndX}%`}
+                y2="38"
+                stroke="rgba(255, 255, 255, 0.04)"
+                strokeWidth="0.5"
+                strokeDasharray="2,2"
+              />
+
+              {/* Today Vertical Line Indicator */}
+              {todayIndex !== -1 && (
+                <line
+                  x1={`${((todayIndex + 0.5) / days.length) * 100}%`}
+                  y1="0"
+                  x2={`${((todayIndex + 0.5) / days.length) * 100}%`}
+                  y2="110"
+                  stroke="rgba(232, 166, 42, 0.15)"
+                  strokeWidth="0.5"
+                />
+              )}
+
               {/* Intake Line (Green) */}
               {days.length > 0 && (
                 <path
                   d={days.map((day, idx) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
                     const { income } = dailyStatsMap[dateKey] || { income: 0 };
-                    const incomeHeight = income > 0 ? Math.max(3, (income / intakeMax) * 60) : 0;
+                    const incomeHeight = income > 0 ? Math.max(4, (income / intakeMax) * 110) : 0;
                     const x = ((idx + 0.5) / days.length) * 100;
-                    const y = 60 - incomeHeight;
+                    const y = 110 - incomeHeight;
                     return `${idx === 0 ? 'M' : 'L'} ${x}% ${y}`;
                   }).join(' ')}
                   fill="none"
-                  stroke="rgba(74, 222, 128, 0.25)"
+                  stroke="rgba(74, 222, 128, 0.15)"
                   strokeWidth="1.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  style={{
+                    transition: 'opacity 200ms ease',
+                    opacity: activeMode === 'OUTPUT' ? 0 : 1
+                  }}
                 />
               )}
-              {/* Output Line (Red) */}
+              {/* Output Line (Red/Gradient) */}
               {days.length > 0 && (
                 <path
                   d={days.map((day, idx) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
                     const { expense } = dailyStatsMap[dateKey] || { expense: 0 };
-                    const expenseHeight = expense > 0 ? Math.max(3, (expense / outputMax) * 60) : 0;
+                    const expenseHeight = expense > 0 ? Math.max(4, (expense / outputMax) * 110) : 0;
                     const x = ((idx + 0.5) / days.length) * 100;
-                    const y = 60 - expenseHeight;
+                    const y = 110 - expenseHeight;
                     return `${idx === 0 ? 'M' : 'L'} ${x}% ${y}`;
                   }).join(' ')}
                   fill="none"
-                  stroke="rgba(248, 113, 113, 0.25)"
+                  stroke="rgba(232, 98, 42, 0.15)"
                   strokeWidth="1.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  style={{
+                    transition: 'opacity 200ms ease',
+                    opacity: activeMode === 'INTAKE' ? 0 : 1
+                  }}
                 />
               )}
             </svg>
           </div>
 
           {/* Baseline rule */}
-          <div className="absolute bottom-[18px] left-0 right-0 h-px bg-white/5 pointer-events-none" />
+          <div className="absolute bottom-[32px] left-0 right-0 h-[0.5px] bg-white/[0.08] pointer-events-none" />
         </div>
         
         {/* Heatmap */}
