@@ -39,13 +39,20 @@ export function AddTransactionModal({ onClose }) {
     e.preventDefault();
     if (!amount || isNaN(amount)) return;
 
+    const [year, month, day] = date.split('-').map(Number);
+    const timeSource = new Date(initialData.timestamp || new Date());
+    const hours = timeSource.getHours();
+    const minutes = timeSource.getMinutes();
+    const seconds = timeSource.getSeconds();
+    const finalDate = new Date(year, month - 1, day, hours, minutes, seconds);
+
     const logData = {
       type,
       amount: parseFloat(amount),
       payee: payee || (type === 'income' ? 'Direct Deposit' : (CATEGORIES.find(c => c.id === category)?.label || 'General Purchase')),
       category,
       account,
-      timestamp: `${date}T${new Date(initialData.timestamp || new Date()).toISOString().split('T')[1]}`
+      timestamp: finalDate.toISOString()
     };
 
     if (isEdit) {
